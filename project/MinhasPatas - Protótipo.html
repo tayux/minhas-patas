@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>MinhasPatas — Protótipo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    background: radial-gradient(120% 80% at 50% 0%, #FBF8F3 0%, #F0EEE9 70%);
+  }
+  * { box-sizing: border-box; }
+  button { font-family: inherit; }
+  .phone-scroll::-webkit-scrollbar { display: none; }
+  .phone-scroll { scrollbar-width: none; }
+
+  .stage {
+    width: 100vw; height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    perspective: 1200px;
+  }
+  .phone-frame {
+    width: 390px; height: 844px; flex-shrink: 0;
+    border-radius: 48px; overflow: hidden; position: relative;
+    box-shadow:
+      0 50px 80px -30px rgba(31,27,46,0.30),
+      0 0 0 12px #1a1426,
+      0 0 0 13px rgba(255,255,255,0.06);
+    background: #FBF8F3;
+  }
+  .di { /* dynamic island */
+    position:absolute; top:11px; left:50%; transform:translateX(-50%);
+    width:118px; height:34px; border-radius:24px; background:#000; z-index:60;
+    pointer-events: none;
+  }
+  .home-bar {
+    position:absolute; bottom:0; left:0; right:0; padding: 8px 0 10px;
+    display:flex; justify-content:center; z-index: 70; pointer-events: none;
+  }
+  .home-bar > div {
+    width: 120px; height: 5px; border-radius: 99px;
+    background: rgba(31,27,46,0.30);
+  }
+  .home-bar.dark > div { background: rgba(255,255,255,0.85); }
+
+  .status-bar {
+    position: absolute; top: 0; left:0; right:0; z-index: 50;
+    display:flex; justify-content:space-between; align-items:center;
+    padding:14px 28px 6px;
+    font-weight: 700; font-size: 15;
+    pointer-events: none;
+  }
+
+  .screen-slot { position:absolute; inset: 0; }
+  .screen-stack { position:absolute; inset: 0; }
+  /* slide transitions */
+  .anim-in-right  { animation: inRight  .32s cubic-bezier(.2,.7,.2,1) both; }
+  .anim-out-left  { animation: outLeft  .32s cubic-bezier(.2,.7,.2,1) both; }
+  .anim-in-left   { animation: inLeft   .32s cubic-bezier(.2,.7,.2,1) both; }
+  .anim-out-right { animation: outRight .32s cubic-bezier(.2,.7,.2,1) both; }
+  .anim-fade-in   { animation: fadeIn   .25s ease both; }
+  .anim-fade-out  { animation: fadeOut  .25s ease both; }
+  .anim-up-in     { animation: upIn     .45s cubic-bezier(.2,.7,.2,1) both; }
+  .anim-up-out    { animation: upOut    .35s cubic-bezier(.2,.7,.2,1) both; }
+  @keyframes inRight  { from{transform:translateX(100%); opacity:.6} to{transform:translateX(0); opacity:1} }
+  @keyframes outLeft  { from{transform:translateX(0);    opacity:1}  to{transform:translateX(-22%); opacity:.5} }
+  @keyframes inLeft   { from{transform:translateX(-22%); opacity:.6} to{transform:translateX(0); opacity:1} }
+  @keyframes outRight { from{transform:translateX(0);    opacity:1}  to{transform:translateX(100%); opacity:.5} }
+  @keyframes fadeIn   { from{opacity:0} to{opacity:1} }
+  @keyframes fadeOut  { from{opacity:1} to{opacity:0} }
+  @keyframes upIn     { from{transform:translateY(100%); opacity:0} to{transform:translateY(0); opacity:1} }
+  @keyframes upOut    { from{transform:translateY(0)} to{transform:translateY(-100%); opacity:0} }
+
+  .toolbar {
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: 18px;
+    display: flex; gap: 6px; padding: 6px;
+    background: rgba(255,255,255,0.86);
+    border: 1px solid rgba(31,27,46,0.08);
+    border-radius: 18px;
+    box-shadow: 0 10px 30px -10px rgba(31,27,46,0.25);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 100; font-size: 12;
+  }
+  .toolbar button {
+    padding: 8px 12px; border-radius: 12px; border: none; cursor: pointer;
+    font-family: inherit; font-weight: 700; font-size: 12px;
+    color: #5C5670; background: transparent;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .toolbar button:hover { background: rgba(107,91,255,0.10); color: #6B5BFF; }
+  .toolbar button.active { background: #6B5BFF; color: #fff; }
+
+  .hint {
+    position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
+    padding: 6px 12px; background: rgba(31,27,46,0.85); color: #fff;
+    border-radius: 99px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px;
+    z-index: 100; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .hint.show { opacity: 1; }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="theme.jsx"></script>
+<script type="text/babel" src="proto-a.jsx"></script>
+<script type="text/babel" src="proto-b.jsx"></script>
+
+<script type="text/babel">
+const { useState, useRef, useEffect, useMemo } = React;
+
+const ROUTES = ['lock', 'onboarding', 'home', 'meds', 'ai', 'today', 'pet', 'finance'];
+const ROUTE_LABELS = {
+  lock:'Lock screen', onboarding:'Login', home:'Início', meds:'Medicamentos',
+  ai:'Receita IA', today:'Hoje', pet:'Perfil', finance:'Finanças',
+};
+
+// Persist route + state
+function loadInitial() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('mp_proto') || '{}');
+    return saved.route || 'lock';
+  } catch { return 'lock'; }
+}
+
+function App() {
+  const [route, _setRoute] = useState(loadInitial());
+  const [direction, setDirection] = useState('forward'); // 'forward'|'back'|'modal'
+  const [prevRoute, setPrevRoute] = useState(null);
+  const [stack, setStack] = useState([]);
+  const [hint, setHint] = useState('');
+
+  // Shared app state across screens (medications, agenda, pet, etc.)
+  const [state, setStateRaw] = useState({
+    pet: 0,
+    filter: 'Ativos',
+    date: 14,
+    meds: [
+      { name:'Prednisolona', dose:'10 mg • 1x ao dia', next:'15:00', icon: I.pill, color: MP.primary, bg: MP.primarySoft, on: true },
+      { name:'Apoquel',      dose:'16 mg • diário',    next:'08:00', icon: I.pill, color: MP.primary, bg: MP.primarySoft, on: true, late: true },
+      { name:'Protetor Hepático', dose:'2.5 ml líquido • 2x ao dia', next:'21:00', icon: I.bottle, color: MP.sky, bg: MP.skySoft, on: true },
+      { name:'Antibiótico',  dose:'500 mg • 3x ao dia', next:'amanhã 07:00', icon: I.pill, color: MP.amber, bg: MP.amberSoft, on: false },
+      { name:'Suplemento Ômega 3', dose:'1 cápsula • diário', next:'12:00', icon: I.pill, color: MP.mint, bg: MP.mintSoft, on: true },
+    ],
+    upcoming: [
+      { time:'15:00', name:'Prednisolona 10mg', pet:'Leia', late:false, done:false },
+      { time:'17:30', name:'Vermífugo',         pet:'Filó', late:true,  done:false },
+    ],
+    events: [
+      { time:'07:00', icon: I.bowl, color: MP.amber,   bg: MP.amberSoft, title:'Café da manhã', sub:'Ração 80g · Leia', done:true },
+      { time:'08:00', icon: I.pill, color: MP.primary, bg: MP.primarySoft, title:'Apoquel 16mg', sub:'1 comprimido com comida', done:true },
+      { time:'10:30', icon: I.walk, color: MP.mint,    bg: MP.mintSoft, title:'Passeio matinal', sub:'30 min · Parque', done:false, late:true },
+      { time:'12:30', icon: I.bowl, color: MP.amber,   bg: MP.amberSoft, title:'Almoço da Leia', sub:'Sachê de frango', done:false },
+      { time:'15:00', icon: I.pill, color: MP.primary, bg: MP.primarySoft, title:'Prednisolona 10mg', sub:'1 comprimido após refeição', done:false },
+      { time:'18:00', icon: I.walk, color: MP.mint,    bg: MP.mintSoft, title:'Passeio da tarde', sub:'20 min · Volta no quarteirão', done:false },
+      { time:'22:00', icon: I.bottle, color: MP.sky,   bg: MP.skySoft, title:'Protetor Hepático', sub:'2.5ml líquido · Leia', done:false },
+    ],
+  });
+  const setState = (patch) => setStateRaw(s => ({ ...s, ...patch }));
+
+  // Determine animation pair based on direction & route relationship
+  const navTo = (r) => {
+    if (r === route) return;
+    setPrevRoute(route);
+    setDirection(r === 'home' && route === 'onboarding' ? 'modal' : 'forward');
+    _setRoute(r);
+    localStorage.setItem('mp_proto', JSON.stringify({ route: r }));
+    setStack(s => [...s, route]);
+    // hint
+    setHint(ROUTE_LABELS[r] || r);
+    clearTimeout(window._hT);
+    window._hT = setTimeout(() => setHint(''), 1200);
+  };
+  const back = () => {
+    const last = stack[stack.length - 1];
+    if (!last) return;
+    setPrevRoute(route);
+    setDirection('back');
+    _setRoute(last);
+    setStack(s => s.slice(0, -1));
+    localStorage.setItem('mp_proto', JSON.stringify({ route: last }));
+  };
+
+  // Clear prevRoute after animation
+  useEffect(() => {
+    if (!prevRoute) return;
+    const t = setTimeout(() => setPrevRoute(null), 360);
+    return () => clearTimeout(t);
+  }, [prevRoute, route]);
+
+  const ctx = { nav: navTo, back, state, setState };
+
+  const screens = {
+    lock:       <PrLock/>,
+    onboarding: <PrOnboarding/>,
+    home:       <PrHome/>,
+    meds:       <PrMeds/>,
+    ai:         <PrAIReader/>,
+    today:      <PrToday/>,
+    pet:        <PrPet/>,
+    finance:    <PrFinance/>,
+  };
+
+  const inAnim  = direction === 'back' ? 'anim-in-left' :
+                  direction === 'modal' ? 'anim-up-in' : 'anim-in-right';
+  const outAnim = direction === 'back' ? 'anim-out-right' :
+                  direction === 'modal' ? 'anim-up-out' : 'anim-out-left';
+
+  const isDark = route === 'lock';
+  const time = '15:00';
+
+  // Auto-scale phone to fit viewport
+  const scaleRef = useRef(null);
+  useEffect(() => {
+    const fit = () => {
+      const el = scaleRef.current; if (!el) return;
+      const margin = 80;
+      const sx = (window.innerWidth - margin) / 390;
+      const sy = (window.innerHeight - margin) / 844;
+      const s = Math.min(1, sx, sy);
+      el.style.transform = `scale(${s})`;
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, []);
+
+  return (
+    <NavCtx.Provider value={ctx}>
+      <div className="stage">
+        <div ref={scaleRef} style={{transformOrigin:'center'}}>
+          <div className="phone-frame" style={{
+            background: isDark ? '#0F0B1A' : '#FBF8F3',
+          }}>
+            <div className="di"/>
+            <div className="status-bar" style={{color: isDark ? '#fff' : '#1F1B2E'}}>
+              <span>{time}</span>
+              <span style={{display:'flex', gap:6, alignItems:'center'}}>
+                <svg width="17" height="11" viewBox="0 0 17 11"><path d="M1 9h2v1H1zm3-2h2v3H4zm3-2h2v5H7zm3-2h2v7h-2zm3-2h2v9h-2z" fill="currentColor"/></svg>
+                <svg width="15" height="11" viewBox="0 0 15 11"><path d="M7.5 2.5C9.5 2.5 11.4 3.3 12.7 4.6L13.7 3.6C12 2 9.9 1 7.5 1S3 2 1.3 3.6l1 1C3.6 3.3 5.5 2.5 7.5 2.5zm0 3.5c1.1 0 2 .4 2.7 1.1l1-1C10.2 5 8.9 4.5 7.5 4.5S4.8 5 3.8 6.1l1 1C5.5 6.4 6.4 6 7.5 6zm0 3a1.5 1.5 0 100 3 1.5 1.5 0 000-3z" fill="currentColor"/></svg>
+                <svg width="24" height="11" viewBox="0 0 24 11"><rect x="0.5" y="0.5" width="20" height="10" rx="2.5" fill="none" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="17" height="7" rx="1.2" fill="currentColor"/><path d="M22 3.5v4c0.7-0.3 1.2-1 1.2-2s-0.5-1.7-1.2-2z" fill="currentColor" opacity="0.5"/></svg>
+              </span>
+            </div>
+
+            <div className="screen-stack">
+              {prevRoute && (
+                <div className={`screen-slot ${outAnim}`} key={`out-${prevRoute}`}>
+                  {screens[prevRoute]}
+                </div>
+              )}
+              <div className={`screen-slot ${prevRoute ? inAnim : ''}`} key={`in-${route}`}>
+                {screens[route]}
+              </div>
+            </div>
+
+            <div className={`home-bar ${isDark ? 'dark' : ''}`}><div/></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      <div className="toolbar">
+        <button onClick={back} disabled={!stack.length} style={{opacity: stack.length ? 1 : 0.4}}>
+          ← Voltar
+        </button>
+        <div style={{width:1, background:'rgba(31,27,46,0.08)', margin:'4px 0'}}/>
+        {ROUTES.map(r => (
+          <button key={r} className={route === r ? 'active' : ''} onClick={() => navTo(r)}>
+            {ROUTE_LABELS[r]}
+          </button>
+        ))}
+      </div>
+
+      <div className={'hint ' + (hint ? 'show' : '')}>→ {hint}</div>
+    </NavCtx.Provider>
+  );
+}
+
+function tryMount() {
+  if (window.PrOnboarding && window.PrHome && window.PrMeds &&
+      window.PrAIReader && window.PrToday && window.PrPet &&
+      window.PrFinance && window.PrLock) {
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  } else {
+    setTimeout(tryMount, 50);
+  }
+}
+tryMount();
+</script>
+</body>
+</html>

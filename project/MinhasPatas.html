@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>MinhasPatas — App Design</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: #f0eee9; }
+  * { box-sizing: border-box; }
+  button { font-family: inherit; }
+  /* hide scrollbars in phone screens */
+  .phone-scroll::-webkit-scrollbar { display: none; }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="theme.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="screens-ab.jsx"></script>
+<script type="text/babel" src="screens-cd.jsx"></script>
+
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard, DCPostIt,
+        TweaksPanel, useTweaks, TweakSection, TweakRadio, TweakSelect } = window;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "paleta": "lavanda",
+  "mascote": "cheia"
+}/*EDITMODE-END*/;
+
+function PaletteSwatch({ stops }) {
+  // Tiny preview swatch — first color large, next two stacked
+  return (
+    <div style={{display:'flex', gap:3, alignItems:'center'}}>
+      <div style={{width:16, height:16, borderRadius:5, background: stops[0]}}/>
+      <div style={{display:'flex', flexDirection:'column', gap:2}}>
+        <div style={{width:7, height:7, borderRadius:2, background: stops[1]}}/>
+        <div style={{width:7, height:7, borderRadius:2, background: stops[2]}}/>
+      </div>
+    </div>
+  );
+}
+
+function Designer() {
+  const W = 390, H = 844;
+  return (
+    <DesignCanvas projectTitle="MinhasPatas" projectSubtitle="App de cuidado para tutores de cães · 8 telas · maio 2026">
+
+      <DCSection id="auth" title="Entrada" subtitle="Onboarding e autenticação">
+        <DCArtboard id="s1" label="01 · Onboarding / Login" width={W} height={H}>
+          <div data-screen-label="01 Onboarding">
+            <Phone><ScreenOnboarding/></Phone>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="core" title="Núcleo do app" subtitle="Dashboard, medicamentos e receita inteligente">
+        <DCArtboard id="s2" label="02 · Home / Dashboard" width={W} height={H}>
+          <div data-screen-label="02 Home">
+            <Phone><ScreenHome/></Phone>
+          </div>
+        </DCArtboard>
+        <DCArtboard id="s3" label="03 · Lista de medicamentos" width={W} height={H}>
+          <div data-screen-label="03 Medicamentos">
+            <Phone><ScreenMeds/></Phone>
+          </div>
+        </DCArtboard>
+        <DCArtboard id="s4" label="04 · Receita inteligente (IA)" width={W} height={H}>
+          <div data-screen-label="04 Receita IA">
+            <Phone><ScreenAIReader/></Phone>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="routine" title="Rotina e pet" subtitle="Agenda diária e perfil">
+        <DCArtboard id="s5" label="05 · Hoje / Agenda" width={W} height={H}>
+          <div data-screen-label="05 Hoje">
+            <Phone><ScreenToday/></Phone>
+          </div>
+        </DCArtboard>
+        <DCArtboard id="s6" label="06 · Perfil da Leia" width={W} height={H}>
+          <div data-screen-label="06 Perfil do pet">
+            <Phone><ScreenPet/></Phone>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="extras" title="Finanças e notificações" subtitle="Controle de gastos e lock screen">
+        <DCArtboard id="s7" label="07 · Dashboard financeiro" width={W} height={H}>
+          <div data-screen-label="07 Finanças">
+            <Phone><ScreenFinance/></Phone>
+          </div>
+        </DCArtboard>
+        <DCArtboard id="s8" label="08 · Notificação (lock screen)" width={W} height={H}>
+          <div data-screen-label="08 Notificação">
+            <Phone dark><ScreenLockNotif/></Phone>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+  );
+}
+
+function App() {
+  const { t, setTweak } = useTweaks(TWEAK_DEFAULTS);
+  const [bump, setBump] = React.useState(0);
+
+  // Imperative bumper, so theme.jsx's mutators can trigger a re-render.
+  React.useEffect(() => {
+    window.__themeBump = () => setBump(b => b + 1);
+    return () => { window.__themeBump = null; };
+  }, []);
+
+  // Apply tweaks to the global theme objects whenever they change.
+  React.useEffect(() => {
+    window.applyPalette(t.paleta);
+    window.setDogStyle(t.mascote);
+  }, [t.paleta, t.mascote]);
+
+  const palettePreview = {
+    lavanda: ['#6B5BFF','#EFEBFF','#FBF8F3'],
+    salvia:  ['#5C8B6E','#E5F0E8','#FAF8F1'],
+    coral:   ['#E26D4F','#FBE3D7','#FBF5EE'],
+    noite:   ['#9A8AFF','#251F4D','#0E0B22'],
+  };
+
+  return (
+    <>
+      {/* `key` forces a re-mount of the canvas tree on theme bumps so every
+          screen reads the freshly-mutated MP / DOG_STYLE on next render. */}
+      <Designer key={`${t.paleta}-${t.mascote}-${bump}`}/>
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Paleta">
+          <TweakRadio
+            label="Mood"
+            value={t.paleta}
+            options={[
+              { value: 'lavanda', label: 'Lavanda' },
+              { value: 'salvia',  label: 'Sálvia' },
+              { value: 'coral',   label: 'Coral' },
+              { value: 'noite',   label: 'Meia-noite' },
+            ]}
+            onChange={v => setTweak('paleta', v)}
+          />
+          <div style={{display:'flex', gap:6, padding:'8px 12px 4px'}}>
+            {Object.entries(palettePreview).map(([k, s]) => (
+              <div key={k} onClick={() => setTweak('paleta', k)} style={{
+                flex:1, cursor:'pointer', padding:6, borderRadius:10,
+                background: t.paleta === k ? 'rgba(107,91,255,0.10)' : 'transparent',
+                border: t.paleta === k ? '1px solid rgba(107,91,255,0.5)' : '1px solid transparent',
+                display:'flex', flexDirection:'column', alignItems:'center', gap:4,
+              }}>
+                <div style={{display:'flex', flexDirection:'column', gap:2, width:'100%'}}>
+                  <div style={{height:14, borderRadius:4, background: s[0]}}/>
+                  <div style={{height:8, borderRadius:3, background: s[1]}}/>
+                  <div style={{height:8, borderRadius:3, background: s[2]}}/>
+                </div>
+                <span style={{fontSize: 10, fontWeight: 700, color: '#5C5670', textTransform:'capitalize'}}>{k === 'noite' ? 'meia-noite' : k}</span>
+              </div>
+            ))}
+          </div>
+        </TweakSection>
+
+        <TweakSection label="Mascote">
+          <TweakRadio
+            label="Estilo do cão"
+            value={t.mascote}
+            options={[
+              { value: 'cheia',      label: 'Cheia' },
+              { value: 'geometrica', label: 'Geom.' },
+              { value: 'linha',      label: 'Linha' },
+            ]}
+            onChange={v => setTweak('mascote', v)}
+          />
+          <div style={{padding:'4px 12px 6px', fontSize: 11, color:'#9A95AC', lineHeight: 1.4}}>
+            Reescreve o tom da marca — retrato caloroso, símbolo geométrico ou desenho editorial.
+          </div>
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+// Wait for all babel scripts to load before mounting
+function tryMount() {
+  if (window.ScreenOnboarding && window.ScreenHome && window.ScreenMeds &&
+      window.ScreenAIReader && window.ScreenToday && window.ScreenPet &&
+      window.ScreenFinance && window.ScreenLockNotif && window.DesignCanvas &&
+      window.TweaksPanel && window.useTweaks && window.applyPalette) {
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  } else {
+    setTimeout(tryMount, 50);
+  }
+}
+tryMount();
+</script>
+</body>
+</html>
