@@ -1,0 +1,5 @@
+{
+  "buildCommand": "EXPO_OFFLINE=1 npx expo export --platform web --output-dir dist",
+  "outputDirectory": "dist",
+  "framework": null
+}
